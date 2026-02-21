@@ -31,8 +31,8 @@ python3 k5flash.py /dev/ttyUSB0 firmware.bin
 - XOR-obfuscated serial protocol
 - CRC-16 XMODEM validation
 - Bootloader beacon detection + handshake
-- Page-by-page flash with progress bar
-- Works with raw `.bin` firmware (not `.packed.bin`)
+- Page-by-page flash with per-page ACK
+- Auto-detects and unpacks `.packed.bin` firmware
 
 ## Tested With
 
@@ -43,4 +43,3 @@ python3 k5flash.py /dev/ttyUSB0 firmware.bin
 ## License
 
 MIT
-# test
