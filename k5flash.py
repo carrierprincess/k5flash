@@ -158,7 +158,8 @@ MSG_PROG_RESP  = 0x051A
 def unpack_firmware(data):
     """Detect and unpack fw-pack.py obfuscated firmware. Returns (raw_bytes, was_packed, version)."""
     # packed format: XOR(plain[:0x2000] + 16-byte version + plain[0x2000:]) + 2-byte CRC
-    if len(data) < 0x2020:
+    # minimum: 2-byte CRC + at least 1 byte of payload
+    if len(data) < 3:
         return data, False, None
 
     # verify trailing CRC (little-endian, byte-swapped by fw-pack)
@@ -172,17 +173,20 @@ def unpack_firmware(data):
     # CRC matches — deobfuscate
     plain = bytes(a ^ b for a, b in zip(payload, cycle(FW_PACK_KEY)))
 
-    # extract version string at 0x2000
-    ver_raw = plain[0x2000:0x2010]
-    ver_str = ver_raw.rstrip(b'\x00').decode('ascii', errors='replace')
-
-    # strip the 16-byte version insert
-    raw = plain[:0x2000] + plain[0x2010:]
+    # extract version string at 0x2000 and strip it (if firmware is large enough)
+    if len(plain) >= 0x2010:
+        ver_raw = plain[0x2000:0x2010]
+        ver_str = ver_raw.rstrip(b'\x00').decode('ascii', errors='replace')
+        raw = plain[:0x2000] + plain[0x2010:]
+    else:
+        ver_str = None
+        raw = plain
 
     # sanity: ARM vector table — SP should point to SRAM (0x2000xxxx)
-    sp = struct.unpack_from('<I', raw, 0)[0]
-    if (sp >> 16) != 0x2000:
-        return data, False, None
+    if len(raw) >= 4:
+        sp = struct.unpack_from('<I', raw, 0)[0]
+        if (sp >> 16) != 0x2000:
+            return data, False, None
 
     return raw, True, ver_str
 
